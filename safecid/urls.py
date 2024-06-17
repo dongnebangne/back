@@ -1,6 +1,6 @@
 from django.urls import path
-from . import views
+from .views import GetWMSLayer
 
-urlpatterns = {
-    path('products/', views.products, name='deposit_products')
-}
+urlpatterns = [
+    path('api/get-wms-layer/', GetWMSLayer.as_view(), name='get-wms-layer')
+]
