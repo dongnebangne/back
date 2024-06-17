@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.http import JsonResponse
 from django.views import View
+import requests
 
 API_KEY = settings.API_KEY
 
@@ -98,3 +99,31 @@ class GetWMSLayer(View):
             filtered_layers = []
 
         return JsonResponse(filtered_layers, safe=False)
+
+def get_sido(request):
+    response = requests.get(f'https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_ADSIDO_INFO&key={API_KEY}&domain=localhost')
+    data = response.json()
+    sido_list = [feature['properties']['sido_nm'] for feature in data['response']['result']['featureCollection']['features']]
+    return JsonResponse(sido_list, safe=False)
+
+def get_sigungu(request):
+    sido = request.GET.get('sido')
+    response = requests.get(f'https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_ADSIGG_INFO&key={API_KEY}&domain=localhost&attrFilter=ctp_kor_nm:like:{sido}')
+    data = response.json()
+    sigungu_list = [feature['properties']['sig_kor_nm'] for feature in data['response']['result']['featureCollection']['features']]
+    return JsonResponse(sigungu_list, safe=False)
+
+def get_emdong(request):
+    sigungu = request.GET.get('sigungu')
+    response = requests.get(f'https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_ADEMD_INFO&key={API_KEY}&domain=localhost&attrFilter=signgu_nm:like:{sigungu}')
+    data = response.json()
+    emdong_list = [feature['properties']['emd_kor_nm'] for feature in data['response']['result']['featureCollection']['features']]
+    return JsonResponse(emdong_list, safe=False)
+
+def get_coordinates(request):
+    emdong = request.GET.get('emdong')
+    response = requests.get(f'https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_ADEMD_INFO&key={API_KEY}&domain=localhost&attrFilter=emd_kor_nm:like:{emdong}')
+    data = response.json()
+    feature = data['response']['result']['featureCollection']['features'][0]
+    coordinates = feature['geometry']['coordinates']
+    return JsonResponse(coordinates, safe=False)
