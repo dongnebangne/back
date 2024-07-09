@@ -1,10 +1,12 @@
 from django.urls import path
-from .views import GetWMSLayer, get_sido, get_sigungu, get_emdong, get_coordinates
+from .views import GetWMSLayer, GetLegend, SidoView, SigunguView, EupmyeondongView, GetCoordinatesFromAddress, GetAddressFromCoordinates
 
 urlpatterns = [
-    path('api/get-wms-layer/', GetWMSLayer.as_view(), name='get-wms-layer'),
-    path('api/sido/', get_sido, name='get_sido'),
-    path('api/sigungu/', get_sigungu, name='get_sigungu'),
-    path('api/emdong/', get_emdong, name='get_emdong'),
-    path('api/coordinates/', get_coordinates, name='get_coordinates'),
+    path('get-wms-layer/', GetWMSLayer.as_view(), name='get-wms-layer'),
+    path('get-legend/', GetLegend.as_view(), name='get-legend-url'),
+    path('sido/', SidoView.as_view(), name='sido-list'),
+    path('sigungu/<str:sido>/', SigunguView.as_view(), name='sigungu-list'),
+    path('eupmyeondong/<str:sido>/<str:sigungu>/', EupmyeondongView.as_view(), name='eupmyeondong-list'),
+    path('coordinates/', GetCoordinatesFromAddress.as_view(), name='get_coordinates'),
+    path('address/', GetAddressFromCoordinates.as_view(), name='get_address'),
 ]

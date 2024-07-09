@@ -28,7 +28,8 @@ DEBUG = env('DEBUG')
 #ALLOWED_HOSTS = []
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
-API_KEY = env('API_KEY')
+SAFEMAP_API_KEY = env('SAFEMAP_API_KEY')
+VWORLD_API_KEY = env('VWORLD_API_KEY')
 
 # Application definition
 
