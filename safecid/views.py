@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views import View
 from safecid.models import Address
 import requests
+import xmltodict
 
 SAFEMAP_API_KEY = settings.SAFEMAP_API_KEY
 VWORLD_API_KEY = settings.VWORLD_API_KEY
@@ -107,15 +108,17 @@ class GetLegend(View):
     def get(self, request):
         layer = request.GET.get('layer')
         style = request.GET.get('style')
-        if not layer:
-            return JsonResponse({'error': 'Missing layer parameter'}, status=400)
 
-        legend_url = f"http://www.safemap.go.kr/legend/legendApiXml.do?apikey={SAFEMAP_API_KEY}&layer={layer}"
-        if style:
-            legend_url += f"&style={style}"
+        if not layer or not style:
+            return JsonResponse({'error': 'Layer and style parameters are required'}, status=400)
 
-        return JsonResponse({'legend_url': legend_url})
-
+        url = f'http://www.safemap.go.kr/legend/legendApiXml.do?apikey={SAFEMAP_API_KEY}&layer={layer}&style={style}'
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = xmltodict.parse(response.content)
+            return JsonResponse(data)
+        else:
+            return JsonResponse({'error': 'Failed to fetch data'}, status=500)
 class SidoView(View):
     def get(self, request):
         sidos = Address.objects.values_list('sido', flat=True).distinct()
