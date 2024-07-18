@@ -1,9 +1,24 @@
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.views import View
 import requests
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import base64
+import json
+import replicate
+from PIL import Image
+import io
+from io import BytesIO
+from rest_framework.decorators import api_view
+from utils.add_background_to_png import add_background_to_png
 
 API_KEY = settings.API_KEY
+
+#REPLICATE_API_TOKEN = os.getenv('REPLICATE_API_TOKEN')
+REPLICATE_API_HOST = "https://api.replicate.com"
+REPLICATE_API_TOKEN = settings.REPLICATE_API_TOKEN
 
 class GetWMSLayer(View):
     def get(self, request):
@@ -127,3 +142,49 @@ def get_coordinates(request):
     feature = data['response']['result']['featureCollection']['features'][0]
     coordinates = feature['geometry']['coordinates']
     return JsonResponse(coordinates, safe=False)
+
+
+@csrf_exempt
+def generate_image(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            prompt = data.get('prompt')
+            init_image = data.get('init_image')
+            mask = data.get('mask')
+
+            response = requests.post(
+                'https://api.replicate.com/v1/predictions',
+                headers={
+                    'Authorization': f'Token {REPLICATE_API_TOKEN}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'version': 'a826166bdfbd1c12981a2e914120aa8c19ab2b5474ff8c70f4e2923e6d6596cc',
+                    'input': {
+                        'prompt': prompt,
+                        'init_image': init_image,
+                        'mask': mask,
+                    },
+                },
+            )
+
+            return JsonResponse(response.json())
+        except Exception as e:
+            print(f"Error: {e}")
+            return HttpResponse(status=500, content=f"Error: {e}")
+
+@csrf_exempt
+def get_prediction_status(request, prediction_id):
+    try:
+        response = requests.get(
+            f'https://api.replicate.com/v1/predictions/{prediction_id}',
+            headers={
+                'Authorization': f'Token {REPLICATE_API_TOKEN}',
+            },
+        )
+        return JsonResponse(response.json())
+    except Exception as e:
+        print(f"Error: {e}")
+        return HttpResponse(status=500, content=f"Error: {e}")
+

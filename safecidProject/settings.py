@@ -29,6 +29,7 @@ DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
 API_KEY = env('API_KEY')
+REPLICATE_API_TOKEN = env('REPLICATE_API_TOKEN')
 
 # Application definition
 
