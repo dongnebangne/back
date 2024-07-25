@@ -3,10 +3,12 @@ from django.http import JsonResponse
 from django.views import View
 from safecid.models import Address
 import requests
+import xmltodict
 
 SAFEMAP_API_KEY = settings.SAFEMAP_API_KEY
 VWORLD_API_KEY = settings.VWORLD_API_KEY
 
+# 범죄 유형별 wms 레이어
 class GetWMSLayer(View):
     def get(self, request):
         category = request.GET.get('category', None)
@@ -103,34 +105,37 @@ class GetWMSLayer(View):
         return JsonResponse(filtered_layers, safe=False)
 
 
+# 범죄 유형별 범례
 class GetLegend(View):
     def get(self, request):
         layer = request.GET.get('layer')
         style = request.GET.get('style')
-        if not layer:
-            return JsonResponse({'error': 'Missing layer parameter'}, status=400)
 
-        legend_url = f"http://www.safemap.go.kr/legend/legendApiXml.do?apikey={SAFEMAP_API_KEY}&layer={layer}"
-        if style:
-            legend_url += f"&style={style}"
+        if not layer or not style:
+            return JsonResponse({'error': 'Layer and style parameters are required'}, status=400)
 
-        return JsonResponse({'legend_url': legend_url})
+        url = f'http://www.safemap.go.kr/legend/legendApiXml.do?apikey={SAFEMAP_API_KEY}&layer={layer}&style={style}'
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = xmltodict.parse(response.content)
+            return JsonResponse(data)
+        else:
+            return JsonResponse({'error': 'Failed to fetch data'}, status=500)
 
+# 시도 목록
 class SidoView(View):
     def get(self, request):
         sidos = Address.objects.values_list('sido', flat=True).distinct()
         return JsonResponse(list(sidos), safe=False)
 
-class SidoView(View):
-    def get(self, request):
-        sidos = Address.objects.values('sido').distinct()
-        return JsonResponse(list(sidos), safe=False)
-
+# 시군구 목록
 class SigunguView(View):
     def get(self, request, sido):
         sigungus = Address.objects.filter(sido=sido).values('sigungu').distinct()
         return JsonResponse(list(sigungus), safe=False)
 
+
+# 읍면동 목록
 class EupmyeondongView(View):
     def get(self, request, sido, sigungu):
         try:
@@ -141,6 +146,7 @@ class EupmyeondongView(View):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
+# 주소로부터 좌표 변환
 class GetCoordinatesFromAddress(View):
     def get(self, request):
         emdong = request.GET.get('emdong')
@@ -164,6 +170,7 @@ class GetCoordinatesFromAddress(View):
         else:
             return JsonResponse({"error": "Invalid response structure or no data found"}, status=500)
 
+# 좌표로부터 주소 변환
 class GetAddressFromCoordinates(View):
     def get(self, request):
         lat = request.GET.get('lat')
