@@ -11,6 +11,22 @@ __pycache__/
 # 데이터 로드 스크립트
 safecid/management/commands/load_address.py
 
+safecid/pretrained_models/
+safecid/pretrained_models
+safecid/pretrained_models/big-lama/
+safecid/pretrained_models/big-lama
+
+safecid/Inpaint-Anything
+safecid/Inpaint-Anything/
+*.pth
+*.ckpt
+
+./media
+./safecid/Inpaint-Anything
+./safecid/pretrained_models
+./safecid/pretrained_models/
+pretrained_models/
+
 # 가상 환경
 venv/
 myenv/
@@ -30,6 +46,12 @@ __pycache__/
 local_settings.py
 db.sqlite3-journal
 media
+.media
+media/images
+media/results
+media/images/
+media/results/
+media/
 
 .Python
 build/

@@ -7,3 +7,7 @@ class Address(models.Model):
 
     def __str__(self):
         return f"{self.sido} {self.sigungu} {self.eupmyeondong}"
+
+class UploadedImage(models.Model):
+    image = models.ImageField(upload_to='images/')
+    created_at = models.DateTimeField(auto_now_add=True)
