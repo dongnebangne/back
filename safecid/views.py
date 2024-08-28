@@ -22,70 +22,6 @@ SAFEMAP_API_KEY = settings.SAFEMAP_API_KEY
 VWORLD_API_KEY = settings.VWORLD_API_KEY
 
 
-# @csrf_exempt
-# def process_image(request):
-#     if request.method == 'POST':
-#         # 이미지와 요청 데이터 처리
-#         image_file = request.FILES['image']
-#         point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
-#         point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
-#         dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
-#         text_prompt = request.POST.get('text_prompt', '')
-#
-#         # SAM 및 LAMA 경로 설정
-#         sam_model_type = request.POST.get('sam_model_type', 'vit_h')
-#         sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
-#         lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
-#         lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
-#
-#         # 이미지 저장 및 처리
-#         uploaded_image = UploadedImage.objects.create(image=image_file)
-#         image_path = uploaded_image.image.path
-#
-#         img = load_img_to_array(image_path)
-#         inpainted_img = process_image_with_sam_and_lama_or_sd(
-#             img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt, lama_config, lama_ckpt,
-#             text_prompt
-#         )
-#
-#         # 결과 이미지 저장 및 경로 반환
-#         output_dir = Path('media/results')
-#         output_dir.mkdir(parents=True, exist_ok=True)
-#         output_path = output_dir / 'inpainted_image.png'
-#         save_array_to_img(inpainted_img, output_path)
-#
-#         return JsonResponse({'image_url': str(output_path)})
-
-#이 코드가 원래 돌아갔던 코드
-# @csrf_exempt
-# def process_image(request):
-#     if request.method == 'POST':
-#         image_file = request.FILES['image']
-#         point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
-#         point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
-#         dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
-#         text_prompt = request.POST.get('text_prompt', '')
-#
-#         sam_model_type = request.POST.get('sam_model_type', 'vit_h')
-#         sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
-#         lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
-#         lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
-#
-#         uploaded_image = UploadedImage.objects.create(image=image_file)
-#         image_path = uploaded_image.image.path
-#
-#         img = load_img_to_array(image_path)
-#         inpainted_image_path, mask_file_paths = process_image_with_sam_and_lama_or_sd(
-#             img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt, lama_config, lama_ckpt, text_prompt
-#         )
-#
-#         inpainted_image_url = f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
-#
-#         return JsonResponse({
-#             'inpainted_image_url': inpainted_image_url
-#         })
-
-
 @csrf_exempt
 def generate_masks(request):
     if request.method == 'POST':
@@ -105,8 +41,15 @@ def generate_masks(request):
             img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt
         )
 
+        # Return the full URL for the masks
         return JsonResponse({
-            'masks': [{'mask_url': str(mask_path), 'masked_image_url': str(masked_img_path)} for mask_path, masked_img_path in mask_file_paths]
+            'masks': [
+                {
+                    'mask_url': f'{settings.MEDIA_URL}results/{Path(mask_path).name}',
+                    'masked_image_url': f'{settings.MEDIA_URL}results/{Path(masked_img_path).name}'
+                }
+                for mask_path, masked_img_path in mask_file_paths
+            ]
         })
 
 
