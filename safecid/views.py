@@ -2,6 +2,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views import View
 from safecid.models import Address
+from safecid.models import University
 import requests
 import xmltodict
 
@@ -145,6 +146,28 @@ class EupmyeondongView(View):
             return JsonResponse(list(eupmyeondongs), safe=False)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+
+
+# 행정구역 목록
+class LocationView(View):
+    def get(self, request):
+        locations = University.objects.values_list('location', flat=True).distinct()
+        return JsonResponse(list(locations), safe=False)
+
+# 대학교 목록
+class UniversityView(View):
+    def get(self, request, location):
+        universities = University.objects.filter(location=location).values('univ_name').distinct()
+        return JsonResponse(list(universities), safe=False)
+
+# 대학교 좌표 반환
+class UniversityCoordinates(View):
+    def get(self, request, name):
+        try:
+            university = University.objects.get(univ_name=name)
+            return JsonResponse({'LON': university.lon, 'LAT': university.lat})
+        except University.DoesNotExist:
+            return JsonResponse({'error': 'University not found'}, status=404)
 
 # 주소로부터 좌표 변환
 class GetCoordinatesFromAddress(View):
