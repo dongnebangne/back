@@ -11,3 +11,12 @@ class Address(models.Model):
 class UploadedImage(models.Model):
     image = models.ImageField(upload_to='images/')
     created_at = models.DateTimeField(auto_now_add=True)
+
+class University(models.Model):
+    univ_name = models.CharField(max_length=255)
+    location = models.CharField(max_length=255)
+    lon = models.FloatField(null=True, blank=True)
+    lat = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
+        return self.univ_name
