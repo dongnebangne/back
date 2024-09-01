@@ -16,12 +16,16 @@ from .utils import load_img_to_array, save_array_to_img
 from pathlib import Path
 from .sam_segment import predict_masks_with_sam
 
+import logging
+from django.http import JsonResponse
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 PRETRAINED_MODELS_DIR = BASE_DIR / 'safecid' / 'pretrained_models'
 
 SAFEMAP_API_KEY = settings.SAFEMAP_API_KEY
 VWORLD_API_KEY = settings.VWORLD_API_KEY
 
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def generate_masks(request):
@@ -59,6 +63,8 @@ def inpaint_image(request):
     if request.method == 'POST':
         selected_mask_idx = int(request.POST.get('selected_mask_idx'))
         text_prompt = request.POST.get('text_prompt', '')
+
+        logger.info(f"Image inpainting started with prompt: {text_prompt}")
 
         lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
         lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
