@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import (GetWMSLayer, GetLegend, SidoView, SigunguView, EupmyeondongView,
+from .views import (health_check, GetWMSLayer, GetLegend, SidoView, SigunguView, EupmyeondongView,
                     LocationView, UniversityView, UniversityCoordinates, GetCoordinatesFromAddress, GetAddressFromCoordinates)
 
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('get-wms-layer/', GetWMSLayer.as_view(), name='get-wms-layer'),
     path('get-legend/', GetLegend.as_view(), name='get-legend-url'),
     path('sido/', SidoView.as_view(), name='sido-list'),

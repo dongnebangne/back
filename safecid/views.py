@@ -224,3 +224,6 @@ class GetAddressFromCoordinates(View):
                 return JsonResponse({'error': 'No address found'}, status=404)
         else:
             return JsonResponse({'error': 'Failed to fetch data from the API'}, status=500)
+
+def health_check(request):
+    return JsonResponse({'status': 'ok'})
