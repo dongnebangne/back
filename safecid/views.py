@@ -151,7 +151,7 @@ class EupmyeondongView(View):
 # 행정구역 목록
 class LocationView(View):
     def get(self, request):
-        locations = University.objects.values_list('location', flat=True).distinct()
+        locations = University.objects.exclude(location='').values_list('location', flat=True).distinct()  # 빈 location 제외
         print("Locations fetched: ", locations)
         if not locations:
             return JsonResponse({"error": "No locations found"}, status=404)
