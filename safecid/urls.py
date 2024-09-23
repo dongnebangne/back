@@ -19,5 +19,6 @@ urlpatterns = [
     #path('process-image/', views.process_image, name='process_image'),
     path('generate-masks/', views.generate_masks, name='generate_masks'),
     path('inpaint-image/', views.inpaint_image, name='inpaint_image'),
+    path('remove-object/', views.remove_object, name='remove_object'),
     path('address/', GetAddressFromCoordinates.as_view(), name='get_address')
 ]

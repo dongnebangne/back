@@ -9,7 +9,9 @@ from .stable_diffusion_inpaint import fill_img_with_sd
 from .utils import dilate_mask, save_array_to_img, show_mask, show_points, load_img_to_array
 from pathlib import Path
 import matplotlib.pyplot as plt
+import logging
 
+logger = logging.getLogger(__name__)
 
 def generate_masks_with_sam(img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt, device="cuda"):
     # SAM을 통해 마스크 생성
@@ -52,21 +54,57 @@ def generate_masks_with_sam(img, point_coords, point_labels, dilate_kernel_size,
 
     return mask_file_paths
 
-def inpaint_image_with_selected_mask(img, selected_mask_idx, text_prompt, lama_config, lama_ckpt, device="cuda"):
-    output_dir = Path('media/results')
-    mask_path = output_dir / f"mask_{selected_mask_idx}.png"
-    mask = load_img_to_array(mask_path)
 
-    # 프롬프트가 없는 경우 LAMA로 인페인팅 (remove anything)
-    if not text_prompt:
-        img_inpainted = inpaint_img_with_lama(img, mask, lama_config, lama_ckpt, device=device)
-    # 프롬프트가 있는 경우 Stable Diffusion으로 인페인팅 (fill anything)
-    else:
+# def inpaint_image_with_selected_mask(img, selected_mask_idx, text_prompt, lama_config, lama_ckpt, device="cuda"):
+#     try:
+#         output_dir = Path('media/results')
+#         mask_path = output_dir / f"mask_{selected_mask_idx}.png"
+#         mask = load_img_to_array(mask_path)
+#
+#         if not text_prompt:
+#             img_inpainted = inpaint_img_with_lama(img, mask, lama_config, lama_ckpt, device=device)
+#         else:
+#             img_inpainted = fill_img_with_sd(img, mask, text_prompt, device=device)
+#
+#         inpainted_image_path = output_dir / 'inpainted_image.png'
+#         save_array_to_img(img_inpainted, inpainted_image_path)
+#
+#         return inpainted_image_path
+#     except Exception as e:
+#         logger.error(f"Error during image inpainting: {e}")
+#         raise
+
+def inpaint_image_with_selected_mask(img, selected_mask_idx, text_prompt, lama_config, lama_ckpt, device="cuda"):
+    try:
+        output_dir = Path('media/results')
+        mask_path = output_dir / f"mask_{selected_mask_idx}.png"
+        mask = load_img_to_array(mask_path)
+
+        # Stable Diffusion을 사용하여 이미지 처리
         img_inpainted = fill_img_with_sd(img, mask, text_prompt, device=device)
 
-    # 인페인팅된 이미지 저장
-    inpainted_image_path = output_dir / 'inpainted_image.png'
-    save_array_to_img(img_inpainted, inpainted_image_path)
+        inpainted_image_path = output_dir / 'inpainted_image.png'
+        save_array_to_img(img_inpainted, inpainted_image_path)
 
-    return inpainted_image_path
+        return inpainted_image_path
+    except Exception as e:
+        logger.error(f"Error during image inpainting with Stable Diffusion: {e}")
+        raise
 
+def remove_object_with_lama(img, selected_mask_idx, lama_config, lama_ckpt, device="cuda"):
+    try:
+        output_dir = Path('media/results')
+        mask_path = output_dir / f"mask_{selected_mask_idx}.png"
+        mask = load_img_to_array(mask_path)
+
+        # LAMA를 사용하여 개체 지우기
+        img_inpainted = inpaint_img_with_lama(img, mask, lama_config, lama_ckpt, device=device)
+
+        # 결과 저장
+        removed_image_path = output_dir / 'removed_image.png'
+        save_array_to_img(img_inpainted, removed_image_path)
+
+        return removed_image_path
+    except Exception as e:
+        logger.error(f"Error during object removal with Lama: {e}")
+        raise

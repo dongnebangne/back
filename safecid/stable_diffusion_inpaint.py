@@ -13,56 +13,6 @@ from .utils.utils import load_img_to_array, save_array_to_img
 import cv2
 
 
-# def fill_img_with_sd(
-#         img: np.ndarray,
-#         mask: np.ndarray,
-#         text_prompt: str,
-#         device="cuda"
-# ):
-#     pipe = StableDiffusionInpaintPipeline.from_pretrained(
-#         "stabilityai/stable-diffusion-2-inpainting",
-#         torch_dtype=torch.float32,
-#     ).to(device)
-#     img_crop, mask_crop = crop_for_filling_pre(img, mask)
-#     img_crop_filled = pipe(
-#         prompt=text_prompt,
-#         image=Image.fromarray(img_crop),
-#         mask_image=Image.fromarray(mask_crop)
-#     ).images[0]
-#     img_filled = crop_for_filling_post(img, mask, np.array(img_crop_filled))
-#     return img_filled
-
-# def fill_img_with_sd(
-#         img: np.ndarray,
-#         mask: np.ndarray,
-#         text_prompt: str,
-#         device="cuda"
-# ):
-#     pipe = StableDiffusionInpaintPipeline.from_pretrained(
-#         "stabilityai/stable-diffusion-2-inpainting",
-#         torch_dtype=torch.float32,
-#     ).to(device)
-#
-#     img_crop, mask_crop = crop_for_filling_pre(img, mask)
-#
-#     # Ensure inpainting pipeline outputs an image of the same size as img_crop
-#     img_crop_filled = pipe(
-#         prompt=text_prompt,
-#         image=Image.fromarray(img_crop),
-#         mask_image=Image.fromarray(mask_crop)
-#     ).images[0]
-#
-#     # Convert the result back to numpy array
-#     img_crop_filled_np = np.array(img_crop_filled)
-#
-#     # Make sure the dimensions match exactly for seamless blending
-#     if img_crop_filled_np.shape != img_crop.shape:
-#         img_crop_filled_np = cv2.resize(img_crop_filled_np, (img_crop.shape[1], img_crop.shape[0]))
-#
-#     img_filled = crop_for_filling_post(img, mask, img_crop_filled_np)
-#
-#     return img_filled
-
 #이게 원래 코드
 def fill_img_with_sd(
         img: np.ndarray,
@@ -84,33 +34,6 @@ def fill_img_with_sd(
     img_filled = crop_for_filling_post(img, mask, np.array(img_crop_filled))
     return img_filled
 
-
-# 위에꺼 원래, 밑에꺼 바꾼거
-# def fill_img_with_sd(
-#         img: np.ndarray,
-#         mask: np.ndarray,
-#         text_prompt: str,
-#         device="cuda"
-# ):
-#     # Stable Diffusion 파이프라인 로드
-#     pipe = StableDiffusionInpaintPipeline.from_pretrained(
-#         "stabilityai/stable-diffusion-2-inpainting",
-#         torch_dtype=torch.float32,
-#     ).to(device)
-#
-#     # 마스크된 이미지를 크롭하여 처리
-#     img_crop, mask_crop = crop_for_filling_pre(img, mask)
-#
-#     # 크롭된 이미지에 대해 인페인팅 수행
-#     img_crop_filled = pipe(
-#         prompt=text_prompt,
-#         image=Image.fromarray(img_crop),
-#         mask_image=Image.fromarray(mask_crop)
-#     ).images[0]
-#
-#     # 인페인팅된 이미지를 원본 이미지와 결합
-#     img_filled = crop_for_filling_post(img, mask, np.array(img_crop_filled))
-#     return img_filled
 
 def replace_img_with_sd(
         img: np.ndarray,

@@ -11,7 +11,7 @@ import xmltodict
 from django.views.decorators.csrf import csrf_exempt
 from .models import UploadedImage
 #from .ai_processing import process_image_with_sam_and_lama_or_sd
-from .ai_processing import generate_masks_with_sam, inpaint_image_with_selected_mask
+from .ai_processing import generate_masks_with_sam, inpaint_image_with_selected_mask, remove_object_with_lama
 from .utils import load_img_to_array, save_array_to_img
 from pathlib import Path
 from .sam_segment import predict_masks_with_sam
@@ -60,27 +60,58 @@ def generate_masks(request):
 
 @csrf_exempt
 def inpaint_image(request):
-    if request.method == 'POST':
-        selected_mask_idx = int(request.POST.get('selected_mask_idx'))
-        text_prompt = request.POST.get('text_prompt', '')
+    try:
+        if request.method == 'POST':
+            selected_mask_idx = int(request.POST.get('selected_mask_idx'))
+            text_prompt = request.POST.get('text_prompt', '')
 
-        logger.info(f"Image inpainting started with prompt: {text_prompt}")
+            logger.info(f"Image inpainting started with prompt: {text_prompt}")
 
-        lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
-        lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
+            # lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
+            # lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
+            lama_config = Path('safecid/lama/configs/prediction/default.yaml')
+            lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
 
-        uploaded_image = UploadedImage.objects.latest('id')
-        image_path = uploaded_image.image.path
-        img = load_img_to_array(image_path)
+            uploaded_image = UploadedImage.objects.latest('id')
+            image_path = uploaded_image.image.path
+            img = load_img_to_array(image_path)
 
-        inpainted_image_path = inpaint_image_with_selected_mask(
-            img, selected_mask_idx, text_prompt, lama_config, lama_ckpt
-        )
+            inpainted_image_path = inpaint_image_with_selected_mask(
+                img, selected_mask_idx, text_prompt, lama_config, lama_ckpt
+            )
 
-        return JsonResponse({
-            'inpainted_image_url': f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
-        })
+            return JsonResponse({
+                'inpainted_image_url': f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
+            })
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")  # 로그에 에러 메시지 기록
+        return JsonResponse({'error': str(e)}, status=500)  # 에러 메시지를 응답에 포함
 
+@csrf_exempt
+def remove_object(request):
+    try:
+        if request.method == 'POST':
+            selected_mask_idx = int(request.POST.get('selected_mask_idx'))
+
+            logger.info("Object removal with Lama started")
+
+            lama_config = Path('safecid/lama/configs/prediction/default.yaml')
+            lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
+
+            uploaded_image = UploadedImage.objects.latest('id')
+            image_path = uploaded_image.image.path
+            img = load_img_to_array(image_path)
+
+            removed_image_path = remove_object_with_lama(
+                img, selected_mask_idx, lama_config, lama_ckpt
+            )
+
+            return JsonResponse({
+                'removed_image_url': f'{settings.MEDIA_URL}results/{Path(removed_image_path).name}'
+            })
+    except Exception as e:
+        logger.error(f"An error occurred during object removal: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 # 범죄 유형별 wms 레이어
