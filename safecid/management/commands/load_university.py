@@ -1,13 +1,15 @@
 import csv
 from django.core.management.base import BaseCommand
 from safecid.models import University
+import os
+from django.conf import settings
 
 class Command(BaseCommand):
     help = 'Load university from CSV file'
 
     def handle(self, *args, **kwargs):
         # 절대 경로를 사용하여 CSV 파일 경로 설정
-        csv_file_path = 'D:/Programming/safe_cid/back/대학교_데이터.csv'
+        csv_file_path = os.path.join(settings.BASE_DIR, '대학교_데이터.csv')
 
         # CSV 파일 로드
         with open(csv_file_path, 'r', encoding='utf-8-sig') as file:
