@@ -152,12 +152,17 @@ class EupmyeondongView(View):
 class LocationView(View):
     def get(self, request):
         locations = University.objects.values_list('location', flat=True).distinct()
+        print("Locations fetched: ", locations)
+        if not locations:
+            return JsonResponse({"error": "No locations found"}, status=404)
         return JsonResponse(list(locations), safe=False)
 
 # 대학교 목록
 class UniversityView(View):
     def get(self, request, location):
         universities = University.objects.filter(location=location).values('univ_name').distinct()
+        if not universities:
+            return JsonResponse({"error": f"No universities found in {location}"}, status=404)
         return JsonResponse(list(universities), safe=False)
 
 # 대학교 좌표 반환
