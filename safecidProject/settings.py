@@ -65,8 +65,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://52.79.103.59"
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
-
 ROOT_URLCONF = 'safecidProject.urls'
 
 TEMPLATES = [
