@@ -62,7 +62,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8000",
-    "http://safecid-fe-env.eba-7mps9yhe.ap-northeast-2.elasticbeanstalk.com"
+    "http://52.78.198.247"
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
