@@ -138,12 +138,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-#STATIC_URL = 'static/'
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # 정적 파일 경로
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')    # collectstatic 시 파일들이 저장될 경로
 
+# Media files
 MEDIA_URL = '/media/'
-MEDIAFILES_DIRS = [os.path.join(BASE_DIR, 'meida')]
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')           # 미디어 파일들이 저장될 경로
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
