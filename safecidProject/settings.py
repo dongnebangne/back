@@ -33,6 +33,11 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 SAFEMAP_API_KEY = env('SAFEMAP_API_KEY')
 VWORLD_API_KEY = env('VWORLD_API_KEY')
 
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID'))
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY'))
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'safecid-s3')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'ap-northeast-2')
+
 # Application definition
 
 INSTALLED_APPS = [
