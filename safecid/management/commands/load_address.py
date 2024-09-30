@@ -8,7 +8,6 @@ class Command(BaseCommand):
     help = 'Load addresses from CSV file'
 
     def handle(self, *args, **kwargs):
-        # 절대 경로를 사용하여 CSV 파일 경로 설정
         csv_file_path = os.path.join(settings.BASE_DIR, '법정동_데이터.csv')
 
         # CSV 파일 로드
