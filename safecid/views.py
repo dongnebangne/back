@@ -27,10 +27,52 @@ VWORLD_API_KEY = settings.VWORLD_API_KEY
 
 logger = logging.getLogger(__name__)
 
+# @csrf_exempt
+# def generate_masks(request):
+#     if request.method == 'POST':
+#         image_file = request.FILES['image']
+#         point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
+#         point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
+#         dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
+#
+#         sam_model_type = request.POST.get('sam_model_type', 'vit_h')
+#         sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
+#
+#         uploaded_image = UploadedImage.objects.create(image=image_file)
+#         image_path = uploaded_image.image.path
+#
+#         img = load_img_to_array(image_path)
+#         mask_file_paths = generate_masks_with_sam(
+#             img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt
+#         )
+#
+#         # Return the full URL for the masks
+#         return JsonResponse({
+#             'masks': [
+#                 {
+#                     'mask_url': f'{settings.MEDIA_URL}results/{Path(mask_path).name}',
+#                     'masked_image_url': f'{settings.MEDIA_URL}results/{Path(masked_img_path).name}'
+#                 }
+#                 for mask_path, masked_img_path in mask_file_paths
+#             ]
+#         })
+
 @csrf_exempt
 def generate_masks(request):
     if request.method == 'POST':
-        image_file = request.FILES['image']
+        # 이미지가 업로드되었는지 또는 결과 이미지가 있는지 확인
+        if 'image' in request.FILES:
+            image_file = request.FILES['image']
+            uploaded_image = UploadedImage.objects.create(image=image_file)
+            image_path = uploaded_image.image.path
+        else:
+            # 결과 이미지가 있다면 그 이미지를 사용
+            output_dir = Path('media/results')
+            if 'inpainted_image.png' in os.listdir(output_dir):
+                image_path = output_dir / 'inpainted_image.png'
+            else:
+                image_path = UploadedImage.objects.latest('id').image.path
+
         point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
         point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
         dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
@@ -38,15 +80,11 @@ def generate_masks(request):
         sam_model_type = request.POST.get('sam_model_type', 'vit_h')
         sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
 
-        uploaded_image = UploadedImage.objects.create(image=image_file)
-        image_path = uploaded_image.image.path
-
         img = load_img_to_array(image_path)
         mask_file_paths = generate_masks_with_sam(
             img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt
         )
 
-        # Return the full URL for the masks
         return JsonResponse({
             'masks': [
                 {
