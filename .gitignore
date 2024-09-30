@@ -6,12 +6,12 @@ __pycache__/
 .env
 
 # 데이터 파일
-법정동_데이터.csv
-대학교_데이터.csv
+#법정동_데이터.csv
+#대학교_데이터.csv
 
 # 데이터 로드 스크립트
-safecid/management/commands/load_address.py
-safecid/management/commands/load_university.py
+#safecid/management/commands/load_address.py
+#safecid/management/commands/load_university.py
 
 # 마이그레이션
 migrations/
@@ -46,7 +46,7 @@ idea/
 .idea/
 idea
 
-requirements.txt
+#requirements.txt
 
 # Django
 db.sqlite3
