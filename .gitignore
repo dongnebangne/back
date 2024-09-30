@@ -8,6 +8,22 @@ __pycache__/
 # 마이그레이션
 migrations/
 
+safecid/pretrained_models/
+safecid/pretrained_models
+safecid/pretrained_models/big-lama/
+safecid/pretrained_models/big-lama
+
+safecid/Inpaint-Anything
+safecid/Inpaint-Anything/
+*.pth
+*.ckpt
+
+./media
+./safecid/Inpaint-Anything
+./safecid/pretrained_models
+./safecid/pretrained_models/
+pretrained_models/
+
 # 가상 환경
 venv/
 myenv/
@@ -16,6 +32,13 @@ env/
 ENV/
 env.bak/
 venv.bak/
+
+.idea
+idea/
+.idea/
+idea
+
+#requirements.txt
 
 # Django
 db.sqlite3
@@ -27,6 +50,12 @@ __pycache__/
 local_settings.py
 db.sqlite3-journal
 media
+.media
+media/images
+media/results
+media/images/
+media/results/
+media/
 
 .Python
 build/

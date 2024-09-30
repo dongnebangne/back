@@ -1,3 +1,4 @@
+import os
 from django.conf import settings
 from django.http import JsonResponse
 from django.views import View
@@ -6,8 +7,150 @@ from safecid.models import University
 import requests
 import xmltodict
 
+
+from django.views.decorators.csrf import csrf_exempt
+from .models import UploadedImage
+#from .ai_processing import process_image_with_sam_and_lama_or_sd
+from .ai_processing import generate_masks_with_sam, inpaint_image_with_selected_mask, remove_object_with_lama
+from .utils import load_img_to_array, save_array_to_img
+from pathlib import Path
+from .sam_segment import predict_masks_with_sam
+
+import logging
+from django.http import JsonResponse
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+PRETRAINED_MODELS_DIR = BASE_DIR / 'safecid' / 'pretrained_models'
+
 SAFEMAP_API_KEY = settings.SAFEMAP_API_KEY
 VWORLD_API_KEY = settings.VWORLD_API_KEY
+
+logger = logging.getLogger(__name__)
+
+# @csrf_exempt
+# def generate_masks(request):
+#     if request.method == 'POST':
+#         image_file = request.FILES['image']
+#         point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
+#         point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
+#         dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
+#
+#         sam_model_type = request.POST.get('sam_model_type', 'vit_h')
+#         sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
+#
+#         uploaded_image = UploadedImage.objects.create(image=image_file)
+#         image_path = uploaded_image.image.path
+#
+#         img = load_img_to_array(image_path)
+#         mask_file_paths = generate_masks_with_sam(
+#             img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt
+#         )
+#
+#         # Return the full URL for the masks
+#         return JsonResponse({
+#             'masks': [
+#                 {
+#                     'mask_url': f'{settings.MEDIA_URL}results/{Path(mask_path).name}',
+#                     'masked_image_url': f'{settings.MEDIA_URL}results/{Path(masked_img_path).name}'
+#                 }
+#                 for mask_path, masked_img_path in mask_file_paths
+#             ]
+#         })
+
+@csrf_exempt
+def generate_masks(request):
+    if request.method == 'POST':
+        # 이미지가 업로드되었는지 또는 결과 이미지가 있는지 확인
+        if 'image' in request.FILES:
+            image_file = request.FILES['image']
+            uploaded_image = UploadedImage.objects.create(image=image_file)
+            image_path = uploaded_image.image.path
+        else:
+            # 결과 이미지가 있다면 그 이미지를 사용
+            output_dir = Path('media/results')
+            if 'inpainted_image.png' in os.listdir(output_dir):
+                image_path = output_dir / 'inpainted_image.png'
+            else:
+                image_path = UploadedImage.objects.latest('id').image.path
+
+        point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
+        point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
+        dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
+
+        sam_model_type = request.POST.get('sam_model_type', 'vit_h')
+        sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
+
+        img = load_img_to_array(image_path)
+        mask_file_paths = generate_masks_with_sam(
+            img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt
+        )
+
+        return JsonResponse({
+            'masks': [
+                {
+                    'mask_url': f'{settings.MEDIA_URL}results/{Path(mask_path).name}',
+                    'masked_image_url': f'{settings.MEDIA_URL}results/{Path(masked_img_path).name}'
+                }
+                for mask_path, masked_img_path in mask_file_paths
+            ]
+        })
+
+
+@csrf_exempt
+def inpaint_image(request):
+    try:
+        if request.method == 'POST':
+            selected_mask_idx = int(request.POST.get('selected_mask_idx'))
+            text_prompt = request.POST.get('text_prompt', '')
+
+            logger.info(f"Image inpainting started with prompt: {text_prompt}")
+
+            # lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
+            # lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
+            lama_config = Path('safecid/lama/configs/prediction/default.yaml')
+            lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
+
+            uploaded_image = UploadedImage.objects.latest('id')
+            image_path = uploaded_image.image.path
+            img = load_img_to_array(image_path)
+
+            inpainted_image_path = inpaint_image_with_selected_mask(
+                img, selected_mask_idx, text_prompt, lama_config, lama_ckpt
+            )
+
+            return JsonResponse({
+                'inpainted_image_url': f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
+            })
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")  # 로그에 에러 메시지 기록
+        return JsonResponse({'error': str(e)}, status=500)  # 에러 메시지를 응답에 포함
+
+@csrf_exempt
+def remove_object(request):
+    try:
+        if request.method == 'POST':
+            selected_mask_idx = int(request.POST.get('selected_mask_idx'))
+
+            logger.info("Object removal with Lama started")
+
+            lama_config = Path('safecid/lama/configs/prediction/default.yaml')
+            lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
+
+            uploaded_image = UploadedImage.objects.latest('id')
+            image_path = uploaded_image.image.path
+            img = load_img_to_array(image_path)
+
+            removed_image_path = remove_object_with_lama(
+                img, selected_mask_idx, lama_config, lama_ckpt
+            )
+
+            return JsonResponse({
+                'removed_image_url': f'{settings.MEDIA_URL}results/{Path(removed_image_path).name}'
+            })
+    except Exception as e:
+        logger.error(f"An error occurred during object removal: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
 
 # 범죄 유형별 wms 레이어
 class GetWMSLayer(View):
