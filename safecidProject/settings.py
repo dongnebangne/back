@@ -66,8 +66,8 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8000",
-    "http://43.203.254.34",
-    "http://43.201.102.175"
+    "43.203.254.34",
+    "43.201.102.175"
 ]
 
 ROOT_URLCONF = 'safecidProject.urls'
