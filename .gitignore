@@ -38,7 +38,7 @@ idea/
 .idea/
 idea
 
-#requirements.txt
+requirements.txt
 
 # Django
 db.sqlite3
