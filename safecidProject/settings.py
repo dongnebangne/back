@@ -66,11 +66,11 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+   "http://localhost:3000",
     "http://localhost:8000",
-    "http://43.203.254.34:3000",
+    "http://3.36.232.193",
     "http://43.201.102.175",
-    "https://43.203.254.34",
+    "https://3.36.232.193",
     "https://43.201.102.175",
 ]
 
