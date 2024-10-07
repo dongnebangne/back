@@ -70,9 +70,9 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
    "http://localhost:3000",
     "http://localhost:8000",
-    "http://3.36.232.193",
+    "http://safe-cid.life",
     "http://43.201.102.175",
-    "https://3.36.232.193",
+    "https://safe-cid.life",
     "https://43.201.102.175",
 ]
 
