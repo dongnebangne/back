@@ -6,7 +6,7 @@ from safecid.models import Address
 from safecid.models import University
 import requests
 import xmltodict
-
+import time
 
 from django.views.decorators.csrf import csrf_exempt
 from .models import UploadedImage
@@ -96,34 +96,76 @@ def generate_masks(request):
         })
 
 
+# @csrf_exempt
+# def inpaint_image(request):
+#     try:
+#         if request.method == 'POST':
+#             selected_mask_idx = int(request.POST.get('selected_mask_idx'))
+#             text_prompt = request.POST.get('text_prompt', '')
+#
+#             logger.info(f"Image inpainting started with prompt: {text_prompt}")
+#
+#             # lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
+#             # lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
+#             lama_config = Path('safecid/lama/configs/prediction/default.yaml')
+#             lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
+#
+#             uploaded_image = UploadedImage.objects.latest('id')
+#             image_path = uploaded_image.image.path
+#             img = load_img_to_array(image_path)
+#
+#             inpainted_image_path = inpaint_image_with_selected_mask(
+#                 img, selected_mask_idx, text_prompt, lama_config, lama_ckpt
+#             )
+#
+#             return JsonResponse({
+#                 'inpainted_image_url': f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
+#             })
+#     except Exception as e:
+#         logger.error(f"An error occurred: {str(e)}")  # 로그에 에러 메시지 기록
+#         return JsonResponse({'error': str(e)}, status=500)  # 에러 메시지를 응답에 포함
+
 @csrf_exempt
 def inpaint_image(request):
     try:
         if request.method == 'POST':
+            start_time = time.time()  # 작업 시작 시간 기록
+
             selected_mask_idx = int(request.POST.get('selected_mask_idx'))
             text_prompt = request.POST.get('text_prompt', '')
 
             logger.info(f"Image inpainting started with prompt: {text_prompt}")
 
-            # lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
-            # lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
+            # LAMA 모델 설정
             lama_config = Path('safecid/lama/configs/prediction/default.yaml')
             lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
 
+            # 업로드된 이미지 가져오기
             uploaded_image = UploadedImage.objects.latest('id')
             image_path = uploaded_image.image.path
             img = load_img_to_array(image_path)
 
+            # 이미지 인페인팅 작업 수행
             inpainted_image_path = inpaint_image_with_selected_mask(
                 img, selected_mask_idx, text_prompt, lama_config, lama_ckpt
             )
 
+            # 타임아웃 체크 (예: 60초)
+            elapsed_time = time.time() - start_time
+            if elapsed_time > 60:  # 60초를 초과하면 타임아웃 발생
+                raise TimeoutError("Image inpainting took too long")
+
             return JsonResponse({
                 'inpainted_image_url': f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
             })
+
+    except TimeoutError as e:
+        logger.error(f"Timeout error: {str(e)}")  # 타임아웃 에러 로그 기록
+        return JsonResponse({'error': str(e)}, status=408)  # 타임아웃 에러 응답
+
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")  # 로그에 에러 메시지 기록
-        return JsonResponse({'error': str(e)}, status=500)  # 에러 메시지를 응답에 포함
+        logger.error(f"An error occurred: {str(e)}")  # 다른 예외에 대한 에러 로그 기록
+        return JsonResponse({'error': str(e)}, status=500)  # 기타 예외 응답
 
 @csrf_exempt
 def remove_object(request):
