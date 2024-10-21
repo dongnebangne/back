@@ -6,7 +6,8 @@ from safecid.models import Address
 from safecid.models import University
 import requests
 import xmltodict
-
+import time
+import torch
 
 from django.views.decorators.csrf import csrf_exempt
 from .models import UploadedImage
@@ -57,73 +58,211 @@ logger = logging.getLogger(__name__)
 #             ]
 #         })
 
+# @csrf_exempt
+# def generate_masks(request):
+#     if request.method == 'POST':
+#         # 이미지가 업로드되었는지 또는 결과 이미지가 있는지 확인
+#         if 'image' in request.FILES:
+#             image_file = request.FILES['image']
+#             uploaded_image = UploadedImage.objects.create(image=image_file)
+#             image_path = uploaded_image.image.path
+#         else:
+#             # 결과 이미지가 있다면 그 이미지를 사용
+#             output_dir = Path('media/results')
+#             if 'inpainted_image.png' in os.listdir(output_dir):
+#                 image_path = output_dir / 'inpainted_image.png'
+#             else:
+#                 image_path = UploadedImage.objects.latest('id').image.path
+#
+#         point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
+#         point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
+#         dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
+#
+#         sam_model_type = request.POST.get('sam_model_type', 'vit_h')
+#         sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
+#
+#         img = load_img_to_array(image_path)
+#         mask_file_paths = generate_masks_with_sam(
+#             img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt
+#         )
+#
+#         return JsonResponse({
+#             'masks': [
+#                 {
+#                     'mask_url': f'{settings.MEDIA_URL}results/{Path(mask_path).name}',
+#                     'masked_image_url': f'{settings.MEDIA_URL}results/{Path(masked_img_path).name}'
+#                 }
+#                 for mask_path, masked_img_path in mask_file_paths
+#             ]
+#         })
+# 위에꺼가 원래 돌아갔던 코드
+# 아래꺼가 토치 해제 추가하는 코드
+
 @csrf_exempt
 def generate_masks(request):
-    if request.method == 'POST':
-        # 이미지가 업로드되었는지 또는 결과 이미지가 있는지 확인
-        if 'image' in request.FILES:
-            image_file = request.FILES['image']
-            uploaded_image = UploadedImage.objects.create(image=image_file)
-            image_path = uploaded_image.image.path
-        else:
-            # 결과 이미지가 있다면 그 이미지를 사용
-            output_dir = Path('media/results')
-            if 'inpainted_image.png' in os.listdir(output_dir):
-                image_path = output_dir / 'inpainted_image.png'
+    try:
+        if request.method == 'POST':
+            # 이미지가 업로드되었는지 또는 결과 이미지가 있는지 확인
+            if 'image' in request.FILES:
+                image_file = request.FILES['image']
+                uploaded_image = UploadedImage.objects.create(image=image_file)
+                image_path = uploaded_image.image.path
             else:
-                image_path = UploadedImage.objects.latest('id').image.path
+                # 결과 이미지가 있다면 그 이미지를 사용
+                output_dir = Path('media/results')
+                if 'inpainted_image.png' in os.listdir(output_dir):
+                    image_path = output_dir / 'inpainted_image.png'
+                else:
+                    image_path = UploadedImage.objects.latest('id').image.path
 
-        point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
-        point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
-        dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
+            point_coords = [float(coord) for coord in request.POST.get('point_coords').split(',')]
+            point_labels = [int(label) for label in request.POST.get('point_labels').split(',')]
+            dilate_kernel_size = int(request.POST.get('dilate_kernel_size', 15))
 
-        sam_model_type = request.POST.get('sam_model_type', 'vit_h')
-        sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
+            sam_model_type = request.POST.get('sam_model_type', 'vit_h')
+            sam_ckpt = PRETRAINED_MODELS_DIR / 'sam_vit_h_4b8939.pth'
 
-        img = load_img_to_array(image_path)
-        mask_file_paths = generate_masks_with_sam(
-            img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt
-        )
+            img = load_img_to_array(image_path)
+            mask_file_paths = generate_masks_with_sam(
+                img, point_coords, point_labels, dilate_kernel_size, sam_model_type, sam_ckpt
+            )
 
-        return JsonResponse({
-            'masks': [
-                {
-                    'mask_url': f'{settings.MEDIA_URL}results/{Path(mask_path).name}',
-                    'masked_image_url': f'{settings.MEDIA_URL}results/{Path(masked_img_path).name}'
-                }
-                for mask_path, masked_img_path in mask_file_paths
-            ]
-        })
+            # 작업 완료 후 GPU 메모리 해제
+            torch.cuda.empty_cache()
 
+            return JsonResponse({
+                'masks': [
+                    {
+                        'mask_url': f'{settings.MEDIA_URL}results/{Path(mask_path).name}',
+                        'masked_image_url': f'{settings.MEDIA_URL}results/{Path(masked_img_path).name}'
+                    }
+                    for mask_path, masked_img_path in mask_file_paths
+                ]
+            })
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
+# @csrf_exempt
+# def inpaint_image(request):
+#     try:
+#         if request.method == 'POST':
+#             selected_mask_idx = int(request.POST.get('selected_mask_idx'))
+#             text_prompt = request.POST.get('text_prompt', '')
+#
+#             logger.info(f"Image inpainting started with prompt: {text_prompt}")
+#
+#             # lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
+#             # lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
+#             lama_config = Path('safecid/lama/configs/prediction/default.yaml')
+#             lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
+#
+#             uploaded_image = UploadedImage.objects.latest('id')
+#             image_path = uploaded_image.image.path
+#             img = load_img_to_array(image_path)
+#
+#             inpainted_image_path = inpaint_image_with_selected_mask(
+#                 img, selected_mask_idx, text_prompt, lama_config, lama_ckpt
+#             )
+#
+#             return JsonResponse({
+#                 'inpainted_image_url': f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
+#             })
+#     except Exception as e:
+#         logger.error(f"An error occurred: {str(e)}")  # 로그에 에러 메시지 기록
+#         return JsonResponse({'error': str(e)}, status=500)  # 에러 메시지를 응답에 포함
+
+# @csrf_exempt
+# def inpaint_image(request):
+#     try:
+#         if request.method == 'POST':
+#             start_time = time.time()  # 작업 시작 시간 기록
+#
+#             selected_mask_idx = int(request.POST.get('selected_mask_idx'))
+#             text_prompt = request.POST.get('text_prompt', '')
+#
+#             logger.info(f"Image inpainting started with prompt: {text_prompt}")
+#
+#             # LAMA 모델 설정
+#             lama_config = Path('safecid/lama/configs/prediction/default.yaml')
+#             lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
+#
+#             # 업로드된 이미지 가져오기
+#             uploaded_image = UploadedImage.objects.latest('id')
+#             image_path = uploaded_image.image.path
+#             img = load_img_to_array(image_path)
+#
+#             # 이미지 인페인팅 작업 수행
+#             inpainted_image_path = inpaint_image_with_selected_mask(
+#                 img, selected_mask_idx, text_prompt, lama_config, lama_ckpt
+#             )
+#
+#             # 타임아웃 체크 (예: 60초)
+#             elapsed_time = time.time() - start_time
+#             if elapsed_time > 60:  # 60초를 초과하면 타임아웃 발생
+#                 raise TimeoutError("Image inpainting took too long")
+#
+#             return JsonResponse({
+#                 'inpainted_image_url': f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
+#             })
+#
+#     except TimeoutError as e:
+#         logger.error(f"Timeout error: {str(e)}")  # 타임아웃 에러 로그 기록
+#         return JsonResponse({'error': str(e)}, status=408)  # 타임아웃 에러 응답
+#
+#     except Exception as e:
+#         logger.error(f"An error occurred: {str(e)}")  # 다른 예외에 대한 에러 로그 기록
+#         return JsonResponse({'error': str(e)}, status=500)  # 기타 예외 응답
+
+# 위에꺼가 돌아갔던 코드
+# 아래꺼가 토치 해제 추가 코드
 
 @csrf_exempt
 def inpaint_image(request):
     try:
         if request.method == 'POST':
+            start_time = time.time()  # 작업 시작 시간 기록
+
             selected_mask_idx = int(request.POST.get('selected_mask_idx'))
             text_prompt = request.POST.get('text_prompt', '')
 
             logger.info(f"Image inpainting started with prompt: {text_prompt}")
 
-            # lama_config = PRETRAINED_MODELS_DIR / 'big-lama' / 'config.yaml'
-            # lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama' / 'models' / 'lama_model.pth'
+            # LAMA 모델 설정
             lama_config = Path('safecid/lama/configs/prediction/default.yaml')
             lama_ckpt = PRETRAINED_MODELS_DIR / 'big-lama'
 
+            # 업로드된 이미지 가져오기
             uploaded_image = UploadedImage.objects.latest('id')
             image_path = uploaded_image.image.path
             img = load_img_to_array(image_path)
 
+            # 이미지 인페인팅 작업 수행
             inpainted_image_path = inpaint_image_with_selected_mask(
                 img, selected_mask_idx, text_prompt, lama_config, lama_ckpt
             )
 
+            # 타임아웃 체크 (예: 60초)
+            elapsed_time = time.time() - start_time
+            if elapsed_time > 60:  # 60초를 초과하면 타임아웃 발생
+                raise TimeoutError("Image inpainting took too long")
+
+            # 작업 완료 후 GPU 메모리 해제
+            torch.cuda.empty_cache()
+
             return JsonResponse({
                 'inpainted_image_url': f'{settings.MEDIA_URL}results/{Path(inpainted_image_path).name}'
             })
+
+    except TimeoutError as e:
+        logger.error(f"Timeout error: {str(e)}")  # 타임아웃 에러 로그 기록
+        return JsonResponse({'error': str(e)}, status=408)  # 타임아웃 에러 응답
+
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")  # 로그에 에러 메시지 기록
-        return JsonResponse({'error': str(e)}, status=500)  # 에러 메시지를 응답에 포함
+        logger.error(f"An error occurred: {str(e)}")  # 다른 예외에 대한 에러 로그 기록
+        return JsonResponse({'error': str(e)}, status=500)  # 기타 예외 응답
 
 @csrf_exempt
 def remove_object(request):
